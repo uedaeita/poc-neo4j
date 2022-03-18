@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  localstack:
+    image: localstack/localstack
+    hostname: localstack
+    container_name: localstack
+    environment:
+      - AWS_DEFAULT_REGION=ap-northeast-1
+      - AWS_DEFAULT_OUTPUT=json
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - SERVICES=s3
+    volumes:
+      - ./localstack/docker-entrypoint-initaws.d/init.sh:/docker-entrypoint-initaws.d/init.sh
+    ports:
+      - 4566:4566
+
+  neo4j:
+    image: neo4j
+    hostname: neo4j
+    container_name: neo4j
+    volumes:
+      - ./neo4j/data:/data
+    ports:
+      - 7474:7474
+      - 7687:7687
+    environment:
+      NEO4J_AUTH: none
+      NEO4J_dbms_logs_debug_level: DEBUG
+      NEO4J_dbms_memory_heap_initial_size: 4G
+      NEO4J_dbms_memory_heap_max_size: 4G
+      NEO4J_dbms_memory_pagecache_size: 4G
+
+  mysql:
+    image: mysql:5.7
+    hostname: mysql
+    container_name: mysql
+    volumes:
+      - ./mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+
+  backend:
+    build:
+      context: ./backend
+    hostname: backend
+    container_name: backend
+    volumes:
+      - ./backend:/opt/poc-neo4j/backend
+    env_file:
+      - ./backend/.env.dev
+    ports:
+      - 5678:5678
+      - 8000:8000
+    command: ["uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+    # For debugging
+    # command: ["sh", "-c", "pip install debugpy && python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]

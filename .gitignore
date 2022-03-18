@@ -1,0 +1,14 @@
+# System
+.DS_Store
+
+# IDE
+/.vscode/*
+!/.vscode/launch.json
+
+# Neo4j
+/neo4j/data/*
+!/neo4j/data/.keep
+
+# MySQL
+/mysql/docker-entrypoint-initdb.d/*
+!/mysql/docker-entrypoint-initdb.d/.keep
