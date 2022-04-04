@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import List, Tuple
+from typing import List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -24,46 +24,22 @@ from app.schema.linkedin.candidate import Candidate as CandidateSchema
 
 logger = logging.getLogger(__name__)
 
-PER_PAGE = 10000
+PER_PAGE = 100000
 
 
 class Candidate:
-    def get_all(
-        self, db: Session
-    ) -> Tuple[
-        List[CandidateModel],
-        List[Course],
-        List[Education],
-        List[Experience],
-        List[Honor],
-        List[Interest],
-        List[Language],
-        List[Project],
-        List[Publication],
-        List[Recommendation],
-        List[Skill],
-        List[Volunteer],
-    ]:
+    def get_all(self, db: Session) -> List[CandidateModel]:
         total_count = self.get_count(db=db)
         total_pages = math.ceil(total_count / PER_PAGE)
 
         ress: List[CandidateSchema] = []
-        from_id = 0
-        for _i in range(1, total_pages + 1):
-            ress.extend(db.query(CandidateSchema).filter(CandidateSchema.id > from_id).order_by(CandidateSchema.id).limit(PER_PAGE))
-            from_id += PER_PAGE
+        for i in range(0, total_pages):
+            ress.extend(
+                db.query(CandidateSchema)
+                .filter(CandidateSchema.id > PER_PAGE * i)
+                .limit(PER_PAGE)
+            )
 
-        all_courses: List[Course] = []
-        all_educations: List[Education] = []
-        all_experiences: List[Experience] = []
-        all_honors: List[Honor] = []
-        all_interests: List[Interest] = []
-        all_languages: List[Language] = []
-        all_projects: List[Project] = []
-        all_publications: List[Publication] = []
-        all_recommendations: List[Recommendation] = []
-        all_skills: List[Skill] = []
-        all_volunteers: List[Volunteer] = []
         candidates: List[CandidateModel] = []
         for res in ress:
             resume: Optional[Resume] = None
@@ -73,7 +49,9 @@ class Candidate:
                     for i in res.resume.get("courses", [])
                 ]
                 educations = [Education(**i) for i in res.resume.get("educations", [])]
-                experiences = [Experience(**i) for i in res.resume.get("experiences", [])]
+                experiences = [
+                    Experience(**i) for i in res.resume.get("experiences", [])
+                ]
                 honors = [Honor(**i) for i in res.resume.get("honors", [])]
                 interests = [Interest(**i) for i in res.resume.get("interests", [])]
                 languages = [
@@ -89,18 +67,6 @@ class Candidate:
                 ]
                 skills = [Skill(**i) for i in res.resume.get("skills", [])]
                 volunteers = [Volunteer(**i) for i in res.resume.get("volunteers", [])]
-
-                all_courses.extend(courses)
-                all_educations.extend(educations)
-                all_experiences.extend(experiences)
-                all_honors.extend(honors)
-                all_interests.extend(interests)
-                all_languages.extend(languages)
-                all_projects.extend(projects)
-                all_publications.extend(publications)
-                all_recommendations.extend(recommendations)
-                all_skills.extend(skills)
-                all_volunteers.extend(volunteers)
 
                 resume = Resume(
                     recruiter_id=res.resume.get("recruiter_id"),
@@ -142,20 +108,7 @@ class Candidate:
             )
             candidates.append(candidate)
 
-        return (
-            candidates,
-            all_courses,
-            all_educations,
-            all_experiences,
-            all_honors,
-            all_interests,
-            all_languages,
-            all_projects,
-            all_publications,
-            all_recommendations,
-            all_skills,
-            all_volunteers,
-        )
+        return candidates
 
     def get_count(self, db: Session) -> int:
         return db.query(func.count(CandidateSchema.id)).scalar()

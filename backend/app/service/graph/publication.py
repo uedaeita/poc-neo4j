@@ -1,54 +1,62 @@
-import csv
 import logging
-from tempfile import NamedTemporaryFile
-from typing import List, Optional
+from typing import Optional
 
 from py2neo import Graph, Node
 from py2neo.matching import NodeMatcher
 
-from app.core.config import Settings
-from app.graph.publication_node import NODE_LABEL, publication_node
+from app.graph.publication_node import NODE_LABEL
+from app.model.csv import CsvStruct
 from app.model.linkedin.candidate import Publication as PublicationModel
-from app.service.aws import s3
+from app.service.graph import schema
+from app.util.string import clean_str
+from app.util.timer import elapsed_timer
 
 logger = logging.getLogger(__name__)
 
+CSV_FILE_NAME = "publication.csv"
+
 
 class Publication:
-    def create_all(self, g: Graph, models: List[PublicationModel]) -> None:
-        tx = g.begin()
+    def __init__(self):
+        self.csv = CsvStruct(
+            filename=CSV_FILE_NAME,
+            headers=["Title", "Link", "Description", "Publisher"],
+            rows=[],
+        )
 
-        uniq_keys: List[str] = []
-        for m in models:
-            if m.title not in uniq_keys:
-                uniq_keys.append(m.title)
-                publication_node.create_node(tx, obj_in=m)
+    def append_csv_row(self, model: PublicationModel) -> None:
+        if not model.title:
+            return
 
-        g.commit(tx)
+        self.csv.rows.append(
+            [
+                model.title,
+                model.link,
+                clean_str(model.description),
+                model.publisher,
+            ]
+        )
 
-    def import_all(self, g: Graph, models: List[PublicationModel]) -> None:
-        headers = [["Id", "Title", "Link", "Description", "Publisher"]]
-        rows = [
-            [i + 1, m.title, m.link, m.description, m.publisher]
-            for i, m in enumerate(models)
-        ]
-        tmpfile = NamedTemporaryFile(delete=False)
-        try:
-            with open(tmpfile.name, "w") as file:
-                writer = csv.writer(file)
-                writer.writerows(headers + rows)
-            with open(tmpfile.name, "rb") as file:
-                s3.upload_fileobj(
-                    file, bucket="xaion-neo4j-csv", key="publications.csv"
-                )
-        finally:
-            tmpfile.close()
-        query = f"""
-        LOAD CSV WITH HEADERS FROM '{Settings.S3_ENDPOINT}/xaion-neo4j-csv/publications.csv' AS row
-        WITH row WHERE row.Id IS NOT NULL AND row.Title IS NOT NULL
-        MERGE (n:{NODE_LABEL} {{publicationId: row.Id, title: row.Title, link: row.Link, description: row.Description, publisher: row.Publisher}})
-        """
-        g.run(query)
+    def import_csv(cls, g: Graph) -> None:
+        with elapsed_timer() as elapsed:
+            csv_url = schema.get_bucket_url(key=CSV_FILE_NAME)
+            query = f"""
+            USING PERIODIC COMMIT 10000
+            LOAD CSV WITH HEADERS FROM '{csv_url}' AS row
+            MERGE (n:{NODE_LABEL} {{title: row.Title}})
+            ON CREATE
+                SET
+                    n.link = row.Link,
+                    n.description = row.Description,
+                    n.publisher = row.Publisher
+            ON MATCH
+                SET
+                    n.link = row.Link,
+                    n.description = row.Description,
+                    n.publisher = row.Publisher
+            """
+            g.run(query)
+            logger.info(f"import csv took: {elapsed()} sec")
 
     def find(self, g: Graph, title: str) -> Optional[Node]:
         nodes = NodeMatcher(g)

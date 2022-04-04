@@ -1,50 +1,49 @@
-import csv
 import logging
-from tempfile import NamedTemporaryFile
-from typing import List, Optional
+from typing import Optional
 
 from py2neo import Graph, Node
 from py2neo.matching import NodeMatcher
 
-from app.core.config import Settings
-from app.graph.course_node import NODE_LABEL, course_node
+from app.graph.course_node import NODE_LABEL
+from app.model.csv import CsvStruct
 from app.model.linkedin.candidate import Course as CourseModel
-from app.service.aws import s3
+from app.service.graph import schema
+from app.util.timer import elapsed_timer
 
 logger = logging.getLogger(__name__)
 
 
+CSV_FILE_NAME = "course.csv"
+
+
 class Course:
-    def create_all(self, g: Graph, models: List[CourseModel]) -> None:
-        tx = g.begin()
+    def __init__(self):
+        self.csv = CsvStruct(
+            filename=CSV_FILE_NAME,
+            headers=["Title"],
+            rows=[],
+        )
 
-        uniq_keys: List[str] = []
-        for m in models:
-            if m.title not in uniq_keys:
-                uniq_keys.append(m.title)
-                course_node.create_node(tx, obj_in=m)
+    def append_csv_row(self, model: CourseModel) -> None:
+        if not model.title:
+            return
 
-        g.commit(tx)
+        self.csv.rows.append(
+            [
+                model.title,
+            ]
+        )
 
-    def import_all(self, g: Graph, models: List[CourseModel]) -> None:
-        headers = [["Id", "Title"]]
-        rows = [[i + 1, m.title] for i, m in enumerate(models)]
-        tmpfile = NamedTemporaryFile(delete=False)
-        try:
-            with open(tmpfile.name, "w") as file:
-                writer = csv.writer(file)
-                writer.writerows(headers + rows)
-            with open(tmpfile.name, "rb") as file:
-                s3.upload_fileobj(file, bucket="xaion-neo4j-csv", key="courses.csv")
-        finally:
-            tmpfile.close()
-
-        query = f"""
-        LOAD CSV WITH HEADERS FROM '{Settings.S3_ENDPOINT}/xaion-neo4j-csv/courses.csv' AS row
-        WITH row WHERE row.Id IS NOT NULL AND row.Title IS NOT NULL
-        MERGE (n:{NODE_LABEL} {{courseId: row.Id, title: row.Title}})
-        """
-        g.run(query)
+    def import_csv(self, g: Graph) -> None:
+        with elapsed_timer() as elapsed:
+            csv_url = schema.get_bucket_url(key=CSV_FILE_NAME)
+            query = f"""
+            USING PERIODIC COMMIT 10000
+            LOAD CSV WITH HEADERS FROM '{csv_url}' AS row
+            MERGE (n:{NODE_LABEL} {{title: row.Title}})
+            """
+            g.run(query)
+            logger.info(f"import csv took: {elapsed()} sec")
 
     def find(self, g: Graph, title: str) -> Optional[Node]:
         nodes = NodeMatcher(g)
