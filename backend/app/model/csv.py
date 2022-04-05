@@ -17,7 +17,7 @@ class CandidateImportCsv(CsvStruct):
     language_relationship: CsvStruct
     project_relationship: CsvStruct
     publication_relationship: CsvStruct
-    recommendation_letter_relationship: CsvStruct
+    rec_letter_relationship: CsvStruct
     school_relationship: CsvStruct
     skill_relationship: CsvStruct
-    volunteer_organization_relationship: CsvStruct
+    volunteer_org_relationship: CsvStruct

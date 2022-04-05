@@ -3,10 +3,10 @@ import logging
 from py2neo import Graph
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.db.session import SessionLocal
 from app.graph.connection import GraphLocal
 from app.service import graph, linkedin
-from app.service.graph import schema
 from app.util.timer import elapsed_timer
 
 logger = logging.getLogger(__name__)
@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 def provision(db: Session, g: Graph) -> None:
     with elapsed_timer() as elapsed:
-        schema.delete_all_nodes(g)
-        schema.delete_all_constraints(g=g)
+        graph.schema.delete_all_nodes(g=g)
+        graph.schema.delete_all_constraints(g=g)
         logger.info(f"clean graph took: {elapsed()} sec")
 
     with elapsed_timer() as elapsed:
-        candidates = linkedin.candidate.candidate.get_all(db=db)
+        candidates = linkedin.candidate.get_all(db=db)
         logger.info(f"get mysql {len(candidates)} candidates took: {elapsed()} sec")
 
     with elapsed_timer() as elapsed:
@@ -105,38 +105,45 @@ def provision(db: Session, g: Graph) -> None:
         logger.info(f"create csv rows took: {elapsed()} sec")
 
     with elapsed_timer() as elapsed:
-        schema.upload_csv_to_s3(csv_struct=company_service.csv)
-        schema.upload_csv_to_s3(csv_struct=course_service.csv)
-        schema.upload_csv_to_s3(csv_struct=honor_service.csv)
-        schema.upload_csv_to_s3(csv_struct=job_service.csv)
-        schema.upload_csv_to_s3(csv_struct=language_service.csv)
-        schema.upload_csv_to_s3(csv_struct=project_service.csv)
-        schema.upload_csv_to_s3(csv_struct=publication_service.csv)
-        schema.upload_csv_to_s3(csv_struct=rec_letter_service.csv)
-        schema.upload_csv_to_s3(csv_struct=skill_service.csv)
-        schema.upload_csv_to_s3(csv_struct=school_service.csv)
-        schema.upload_csv_to_s3(csv_struct=volunteer_org_service.csv)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.company_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.course_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.honor_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.job_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.language_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.project_relationship)
-        schema.upload_csv_to_s3(
-            csv_struct=candidate_service.csv.publication_relationship
-        )
-        schema.upload_csv_to_s3(
-            csv_struct=candidate_service.csv.recommendation_letter_relationship
-        )
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.school_relationship)
-        schema.upload_csv_to_s3(csv_struct=candidate_service.csv.skill_relationship)
-        schema.upload_csv_to_s3(
-            csv_struct=candidate_service.csv.volunteer_organization_relationship
+        graph.schema.upload_csv_to_s3(cs=company_service.csv)
+        graph.schema.upload_csv_to_s3(cs=course_service.csv)
+        graph.schema.upload_csv_to_s3(cs=honor_service.csv)
+        graph.schema.upload_csv_to_s3(cs=job_service.csv)
+        graph.schema.upload_csv_to_s3(cs=language_service.csv)
+        graph.schema.upload_csv_to_s3(cs=project_service.csv)
+        graph.schema.upload_csv_to_s3(cs=publication_service.csv)
+        graph.schema.upload_csv_to_s3(cs=rec_letter_service.csv)
+        graph.schema.upload_csv_to_s3(cs=skill_service.csv)
+        graph.schema.upload_csv_to_s3(cs=school_service.csv)
+        graph.schema.upload_csv_to_s3(cs=volunteer_org_service.csv)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.company_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.course_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.honor_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.job_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.language_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.project_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.publication_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.rec_letter_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.school_relationship)
+        graph.schema.upload_csv_to_s3(cs=candidate_service.csv.skill_relationship)
+        graph.schema.upload_csv_to_s3(
+            cs=candidate_service.csv.volunteer_org_relationship
         )
         logger.info(f"upload csv took: {elapsed()} sec")
 
     with elapsed_timer() as elapsed:
+        company_service.create_constraint(g=g)
+        course_service.create_constraint(g=g)
+        honor_service.create_constraint(g=g)
+        job_service.create_constraint(g=g)
+        language_service.create_constraint(g=g)
+        project_service.create_constraint(g=g)
+        publication_service.create_constraint(g=g)
+        rec_letter_service.create_constraint(g=g)
+        school_service.create_constraint(g=g)
+        skill_service.create_constraint(g=g)
+        volunteer_org_service.create_constraint(g=g)
         candidate_service.create_constraint(g=g)
         logger.info(f"create constraints took: {elapsed()} sec")
 
@@ -167,11 +174,16 @@ def provision(db: Session, g: Graph) -> None:
         logger.info(f"import graph took: {elapsed()} sec")
 
 
-if __name__ == "__main__":
-    logger.info("provision start.")
+def main():
+    logging.basicConfig(level=getattr(logging, Settings.LOG_LEVEL))
+    logger.info("[START]: provision")
 
     db = SessionLocal()
     g = GraphLocal()
     provision(db=db, g=g)
 
-    logger.info("provision end.")
+    logger.info("[ END ]: provision")
+
+
+if __name__ == "__main__":
+    main()

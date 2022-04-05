@@ -62,6 +62,7 @@ class Candidate:
                 "UserId",
                 "Name",
                 "RecruiterId",
+                "Location",
                 "Obs",
                 "InviteDate",
                 "CompanyCurrent",
@@ -130,7 +131,7 @@ class Candidate:
                 headers=["CandidateName", "PublicationTitle", "Date"],
                 rows=[],
             ),
-            recommendation_letter_relationship=CsvStruct(
+            rec_letter_relationship=CsvStruct(
                 filename=CSV_NAME_CAND_REC_LETTER_REL,
                 headers=["CandidateName", "RecommendationLetterName"],
                 rows=[],
@@ -153,7 +154,7 @@ class Candidate:
                 headers=["CandidateName", "SkillName"],
                 rows=[],
             ),
-            volunteer_organization_relationship=CsvStruct(
+            volunteer_org_relationship=CsvStruct(
                 filename=CSV_NAME_CAND_VOLUNTEER_ORG_REL,
                 headers=[
                     "CandidateName",
@@ -172,8 +173,9 @@ class Candidate:
         self.csv.rows.append(
             [
                 model.user_id,
-                model.name,
+                clean_str(model.name),
                 model.recruiter_id,
+                clean_str(model.resume.location) if model.resume else None,
                 model.obs,
                 model.invite_date,
             ]
@@ -184,13 +186,13 @@ class Candidate:
     ) -> None:
         self.csv.company_relationship.rows.append(
             [
-                from_model.name,
-                to_model.company,
+                clean_str(from_model.name),
+                clean_str(to_model.company),
                 to_model.current,
-                to_model.begin_date,
-                to_model.end_date,
-                to_model.employee_status,
-                to_model.title,
+                clean_str(to_model.begin_date),
+                clean_str(to_model.end_date),
+                clean_str(to_model.employee_status),
+                clean_str(to_model.title),
                 clean_str(to_model.location),
                 clean_str(to_model.description),
             ]
@@ -199,25 +201,34 @@ class Candidate:
     def append_csv_course_rel_row(
         self, from_model: CandidateModel, to_model: Course
     ) -> None:
-        self.csv.course_relationship.rows.append([from_model.name, to_model.title])
+        self.csv.course_relationship.rows.append(
+            [
+                clean_str(from_model.name),
+                clean_str(to_model.title),
+            ]
+        )
 
     def append_csv_honor_rel_row(
         self, from_model: CandidateModel, to_model: Honor
     ) -> None:
         self.csv.honor_relationship.rows.append(
-            [from_model.name, to_model.title, to_model.date]
+            [
+                clean_str(from_model.name),
+                clean_str(to_model.title),
+                clean_str(to_model.date),
+            ]
         )
 
     def append_csv_job_rel_row(
         self, from_model: CandidateModel, to_model: Experience
     ) -> None:
-        self.csv.honor_relationship.rows.append(
+        self.csv.job_relationship.rows.append(
             [
-                from_model.name,
-                to_model.title,
-                to_model.company,
-                to_model.begin_date,
-                to_model.end_date,
+                clean_str(from_model.name),
+                clean_str(to_model.title),
+                clean_str(to_model.company),
+                clean_str(to_model.begin_date),
+                clean_str(to_model.end_date),
             ]
         )
 
@@ -226,9 +237,9 @@ class Candidate:
     ) -> None:
         self.csv.language_relationship.rows.append(
             [
-                from_model.name,
-                to_model.name,
-                to_model.proficiency,
+                clean_str(from_model.name),
+                clean_str(to_model.name),
+                clean_str(to_model.proficiency),
             ]
         )
 
@@ -237,10 +248,10 @@ class Candidate:
     ) -> None:
         self.csv.project_relationship.rows.append(
             [
-                from_model.name,
-                to_model.title,
-                to_model.begin_date,
-                to_model.end_date,
+                clean_str(from_model.name),
+                clean_str(to_model.title),
+                clean_str(to_model.begin_date),
+                clean_str(to_model.end_date),
                 clean_str(to_model.description),
             ]
         )
@@ -250,19 +261,19 @@ class Candidate:
     ) -> None:
         self.csv.publication_relationship.rows.append(
             [
-                from_model.name,
-                to_model.title,
-                to_model.date,
+                clean_str(from_model.name),
+                clean_str(to_model.title),
+                clean_str(to_model.date),
             ]
         )
 
     def append_csv_rec_letter_rel_row(
         self, from_model: CandidateModel, to_model: Recommendation
     ) -> None:
-        self.csv.recommendation_letter_relationship.rows.append(
+        self.csv.rec_letter_relationship.rows.append(
             [
-                from_model.name,
-                to_model.name,
+                clean_str(from_model.name),
+                clean_str(to_model.name),
             ]
         )
 
@@ -271,12 +282,12 @@ class Candidate:
     ) -> None:
         self.csv.school_relationship.rows.append(
             [
-                from_model.name,
-                to_model.school,
-                to_model.begin_date,
-                to_model.end_date,
-                to_model.degree,
-                to_model.course,
+                clean_str(from_model.name),
+                clean_str(to_model.school),
+                clean_str(to_model.begin_date),
+                clean_str(to_model.end_date),
+                clean_str(to_model.degree),
+                clean_str(to_model.course),
                 clean_str(to_model.description),
             ]
         )
@@ -286,25 +297,28 @@ class Candidate:
     ) -> None:
         self.csv.skill_relationship.rows.append(
             [
-                from_model.name,
-                to_model.name,
+                clean_str(from_model.name),
+                clean_str(to_model.name),
             ]
         )
 
     def append_csv_volunteer_org_rel_row(
         self, from_model: CandidateModel, to_model: Volunteer
     ) -> None:
-        self.csv.volunteer_organization_relationship.rows.append(
+        self.csv.volunteer_org_relationship.rows.append(
             [
-                from_model.name,
-                to_model.organization,
-                to_model.begin_date,
-                to_model.end_date,
-                to_model.role,
+                clean_str(from_model.name),
+                clean_str(to_model.organization),
+                clean_str(to_model.begin_date),
+                clean_str(to_model.end_date),
+                clean_str(to_model.role),
                 clean_str(to_model.description),
-                to_model.cause,
+                clean_str(to_model.cause),
             ]
         )
+
+    def create_constraint(self, g: Graph) -> None:
+        g.schema.create_uniqueness_constraint(NODE_LABEL, "name")
 
     def import_csv(self, g: Graph) -> None:
         with elapsed_timer() as elapsed:
@@ -317,13 +331,15 @@ class Candidate:
                 SET
                     n.userId = row.UserId,
                     n.recruiterId = row.RecruiterId,
-                    n.obs = row.Obs,
+                    n.location = row.Location,
+                    n.obs = toBoolean(row.Obs),
                     n.inviteDate = row.InviteDate
             ON MATCH
                 SET
                     n.userId = row.UserId,
                     n.recruiterId = row.RecruiterId,
-                    n.obs = row.Obs,
+                    n.location = row.Location,
+                    n.obs = toBoolean(row.Obs),
                     n.inviteDate = row.InviteDate
             """
             g.run(query)
@@ -339,7 +355,7 @@ class Candidate:
             MATCH (company:{COMPANY_NODE_LABEL} {{name: row.CompanyName}})
             CREATE (candidate)-[
                 :{relationship.WorksFor.__name__} {{
-                    current: row.Current,
+                    current: toBoolean(row.Current),
                     beginDate: row.BeginDate,
                     endDate: row.EndDate,
                     employeeStatus: row.EmployeeStatus,
@@ -531,20 +547,6 @@ class Candidate:
             """
             g.run(query)
             logger.info(f"volunteer_organization_rel:import csv took: {elapsed()} sec")
-
-    def create_constraint(self, g: Graph) -> None:
-        g.schema.create_uniqueness_constraint(COMPANY_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(COURSE_NODE_LABEL, "title")
-        g.schema.create_uniqueness_constraint(HONOR_NODE_LABEL, "title")
-        g.schema.create_uniqueness_constraint(JOB_NODE_LABEL, "title")
-        g.schema.create_uniqueness_constraint(LANGUAGE_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(PROJECT_NODE_LABEL, "title")
-        g.schema.create_uniqueness_constraint(PUBLICATION_NODE_LABEL, "title")
-        g.schema.create_uniqueness_constraint(RECOMMENDATION_LETTER_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(SCHOOL_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(SKILL_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(VOLUNTEER_ORGANIZATION_NODE_LABEL, "name")
-        g.schema.create_uniqueness_constraint(NODE_LABEL, "name")
 
 
 candidate = Candidate()

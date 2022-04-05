@@ -24,7 +24,7 @@ from app.schema.linkedin.candidate import Candidate as CandidateSchema
 
 logger = logging.getLogger(__name__)
 
-PER_PAGE = 100000
+PER_PAGE = 100_000
 
 
 class Candidate:

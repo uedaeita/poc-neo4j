@@ -8,9 +8,13 @@ packages = [
   { include="tests", from="." },
 ]
 
+[tool.poetry.scripts]
+"provision:graph" = "app.service.provision.graph:main"
+
 [tool.poetry.dependencies]
 python = "^3.9"
 alembic = "^1.7.7"
+boto3 = "^1.21.30"
 fastapi = "^0.75.0"
 fastapi-camelcase = "^1.0.5"
 pandas = "^1.4.1"
@@ -21,7 +25,6 @@ python-cypher = "^0.20.0"
 python-dotenv = "^0.19.2"
 SQLAlchemy = "^1.4.32"
 uvicorn = {extras = ["standard"], version = "^0.17.6"}
-boto3 = "^1.21.30"
 
 [tool.poetry.dev-dependencies]
 autoflake = "^1.4"

@@ -58,7 +58,9 @@ Follow the document for [poetry](https://python-poetry.org/docs/) to install.
 Install required modules for the app.
 
 ```bash
-make -C backend install
+cd backend
+poetry env use $(pyenv which python)
+make install
 ```
 
 #### 4. Customize your .env
@@ -76,9 +78,27 @@ make db-up
 #### 6. Start app
 
 ```bash
-make -C backend dev
+cd backend
+make dev
 ```
 
 ### Access FastAPI docs
 
 http://localhost:8000/docs
+
+## Provisioning
+
+### 1. Configure your .env
+
+Configure your `.env` to match deployment environment variables.
+
+### 2. Execute provisioning commands
+
+#### Graph DB
+
+Execute the command below. (This will take a while...)
+
+```bash
+cd backend
+poetry run provision:graph
+```
